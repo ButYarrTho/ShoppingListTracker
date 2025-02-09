@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ShoppingListTracker.Models;
+using ShoppingListTracker.Models.DTO;
+
 
 namespace ShoppingListTracker.Controllers
 {
@@ -22,52 +24,93 @@ namespace ShoppingListTracker.Controllers
 
         // GET: api/Categories
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Category>>> GetCategories()
+        public async Task<ActionResult<IEnumerable<CategoryDto>>> GetCategories()
         {
-            return await _context.Categories.ToListAsync();
+            var categories = await _context.Categories
+                .Include(c => c.Items)  // Make sure to include related items
+                .ToListAsync();
+
+            // Map the categories to CategoryDto and their items to ItemDto
+            var categoryDtos = categories.Select(category => new CategoryDto
+            {
+                Id = category.Id,
+                Name = category.Name,
+                Items = category.Items.Select(item => new ItemDto
+                {
+                    Id = item.Id,
+                    Name = item.Name,
+                    Quantity = item.Quantity,
+                    Price = item.Price
+                }).ToList()
+            }).ToList();
+
+            return categoryDtos;
         }
 
         // GET: api/Categories/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Category>> GetCategory(int id)
+        public async Task<ActionResult<CategoryDto>> GetCategory(int id)
         {
-            var category = await _context.Categories.FindAsync(id);
+            var category = await _context.Categories
+                .Include(c => c.Items)  // Include related items
+                .FirstOrDefaultAsync(c => c.Id == id);
 
             if (category == null)
             {
                 return NotFound();
             }
 
-            return category;
+            // Map the category to CategoryDto and its items to ItemDto
+            var categoryDto = new CategoryDto
+            {
+                Id = category.Id,
+                Name = category.Name,
+                Items = category.Items.Select(item => new ItemDto
+                {
+                    Id = item.Id,
+                    Name = item.Name,
+                    Quantity = item.Quantity,
+                    Price = item.Price
+                }).ToList()
+            };
+
+            return categoryDto;
         }
 
         // PUT: api/Categories/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutCategory(int id, Category category)
+        public async Task<IActionResult> PutCategory(int id, CategoryDto categoryDto)
         {
-            if (id != category.Id)
+            if (id != categoryDto.Id)
             {
                 return BadRequest();
             }
 
-            _context.Entry(category).State = EntityState.Modified;
+            var category = await _context.Categories
+                .Include(c => c.Items)  // Include items to update them too
+                .FirstOrDefaultAsync(c => c.Id == id);
 
-            try
+            if (category == null)
             {
-                await _context.SaveChangesAsync();
+                return NotFound();
             }
-            catch (DbUpdateConcurrencyException)
+
+            // Map CategoryDto to Category entity
+            category.Name = categoryDto.Name;
+
+            // Update items (remove old ones, add new ones)
+            category.Items.Clear();
+            category.Items.AddRange(categoryDto.Items.Select(i => new Item
             {
-                if (!CategoryExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
+                Id = i.Id,
+                Name = i.Name,
+                Quantity = i.Quantity,
+                Price = i.Price
+            }));
+
+            _context.Entry(category).State = EntityState.Modified;
+            await _context.SaveChangesAsync();
 
             return NoContent();
         }
@@ -75,8 +118,20 @@ namespace ShoppingListTracker.Controllers
         // POST: api/Categories
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<Category>> PostCategory(Category category)
+        public async Task<ActionResult<Category>> PostCategory(CategoryDto categoryDto)
         {
+            // Map CategoryDto to Category entity
+            var category = new Category
+            {
+                Name = categoryDto.Name,
+                Items = categoryDto.Items.Select(i => new Item
+                {
+                    Name = i.Name,
+                    Quantity = i.Quantity,
+                    Price = i.Price
+                }).ToList()
+            };
+
             _context.Categories.Add(category);
             await _context.SaveChangesAsync();
 
@@ -97,11 +152,6 @@ namespace ShoppingListTracker.Controllers
             await _context.SaveChangesAsync();
 
             return NoContent();
-        }
-
-        private bool CategoryExists(int id)
-        {
-            return _context.Categories.Any(e => e.Id == id);
         }
     }
 }
