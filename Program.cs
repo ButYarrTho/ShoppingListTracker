@@ -1,25 +1,28 @@
+using Microsoft.EntityFrameworkCore;
+using ShoppingListTracker.Models;
+
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+var connectionString = "bv7lls09esqlxlfcgu5c-mysql.services.clever-cloud.com;database=bv7lls09esqlxlfcgu5c;user=utiq2jnexxcow3w4;password=KfOZhBkTFnwW2ZyIEWvT";
+var serverVersion = new MySqlServerVersion(new Version(8, 0, 30));
+
+builder.Services.AddDbContext<ShoppingListContext>(opt =>
+    opt.UseMySql(connectionString, serverVersion));
 
 builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddEndpointsApiExplorer();  
+builder.Services.AddSwaggerGen();            
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment())  
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
-
-app.UseAuthorization();
-
-app.MapControllers();
+app.UseRouting();
+app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
 
 app.Run();
