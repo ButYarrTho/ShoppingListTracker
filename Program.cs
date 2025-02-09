@@ -4,7 +4,7 @@ using ShoppingListTracker.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var connectionString = "bv7lls09esqlxlfcgu5c-mysql.services.clever-cloud.com;database=bv7lls09esqlxlfcgu5c;user=utiq2jnexxcow3w4;password=KfOZhBkTFnwW2ZyIEWvT";
+var connectionString = "server=bv7lls09esqlxlfcgu5c-mysql.services.clever-cloud.com;database=bv7lls09esqlxlfcgu5c;user=utiq2jnexxcow3w4;password=KfOZhBkTFnwW2ZyIEWvT";
 var serverVersion = new MySqlServerVersion(new Version(8, 0, 30));
 
 builder.Services.AddDbContext<ShoppingListContext>(opt =>
